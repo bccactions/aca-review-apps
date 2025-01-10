@@ -1,24 +1,43 @@
-name: Create release
 
-on:
-  push:
-    tags:
-      - "v*"
+name: Build and Release Action
 
 permissions:
   contents: write
 
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed  # Trigger only when the PR is closed (merged)
+
 jobs:
-  release:
-    name: Release pushed tag
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Create release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  # Specify your desired Node.js version
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Build the action
+      - name: Build the action
+        run: npm run build
+
+      # Create a release when the PR is merged
+      - name: Release new version
+        if: github.event.pull_request.merged == true
         run: |
-          gh release create "$tag" \
-              --repo="$GITHUB_REPOSITORY" \
-              --title="${tag#v}" \
-              --generate-notes
+          npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # To authenticate GitHub API calls
